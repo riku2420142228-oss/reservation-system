@@ -34,3 +34,11 @@ body {
   border-color: var(--theme-color, #3B82F6);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--theme-color, #3B82F6) 20%, transparent);
 }
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
