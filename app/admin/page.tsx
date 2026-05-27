@@ -2862,9 +2862,9 @@ function ReservationDetailModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden max-h-[90vh] flex flex-col">
         {/* ヘッダー */}
-        <div className="px-6 py-5 text-white" style={{ backgroundColor: headerColor }}>
+        <div className="px-6 py-5 text-white flex-shrink-0" style={{ backgroundColor: headerColor }}>
           <div className="flex items-start justify-between">
             <div className="flex-1 min-w-0">
               <div className="text-xl font-bold truncate">{r.name}</div>
@@ -2886,7 +2886,7 @@ function ReservationDetailModal({
         </div>
 
         {/* ボディ */}
-        <div className="px-6 py-5 space-y-4 overflow-y-auto max-h-[60vh]">
+        <div className="px-6 py-5 space-y-4 overflow-y-auto flex-1">
           {/* メニュー・スタッフ・ステータス */}
           <div className="flex flex-wrap items-center gap-2">
             {cat && (
@@ -2960,12 +2960,12 @@ function ReservationDetailModal({
         </div>
 
         {/* フッター：ステータス変更 */}
-        <div className="px-6 py-4 border-t border-gray-100 bg-gray-50">
+        <div className="px-6 py-4 border-t border-gray-100 bg-gray-50 flex-shrink-0">
           <button
             onClick={() => onStatusToggle(r)}
             disabled={updatingId === r.id}
             className={cn(
-              "w-full py-2.5 rounded-xl text-sm font-semibold transition-colors flex items-center justify-center gap-2 disabled:opacity-50",
+              "w-full py-3 rounded-xl text-sm font-semibold transition-colors flex items-center justify-center gap-2 disabled:opacity-50",
               isCancelled
                 ? "bg-green-500 text-white hover:bg-green-600"
                 : "bg-red-50 text-red-600 hover:bg-red-100"
