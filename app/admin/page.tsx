@@ -220,6 +220,7 @@ export default function AdminPage() {
   } | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<TimeSlot | null>(null);
   const [showManualAdd, setShowManualAdd] = useState(false);
+  const [tapStartTime, setTapStartTime] = useState<string | undefined>(undefined);
 
   const reloadFormFields = useCallback(async () => {
     const fields = await fetchFormFields();
@@ -526,6 +527,7 @@ export default function AdminPage() {
                           setError("先にカテゴリを選択してください");
                           return;
                         }
+                        setTapStartTime(undefined);
                         setShowManualAdd(true);
                       }}
                       className="flex items-center gap-1 text-sm text-blue-600 px-3 py-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 transition-colors"
@@ -551,6 +553,14 @@ export default function AdminPage() {
                     setPendingSlot({ startTime, endTime, date: selectedDate });
                   }}
                   onSelect={(slot) => setSelectedSlot(slot)}
+                  onTap={(tappedTime) => {
+                    if (!selectedCategoryId) {
+                      setError("先にカテゴリを選択してください");
+                      return;
+                    }
+                    setTapStartTime(tappedTime);
+                    setShowManualAdd(true);
+                  }}
                 />
               </section>
             </div>
@@ -602,11 +612,16 @@ export default function AdminPage() {
             {showManualAdd && selectedCategoryId && (
               <ManualSlotPickerModal
                 date={selectedDate}
+                initialStartTime={tapStartTime}
                 onConfirm={(startTime, endTime) => {
                   setShowManualAdd(false);
+                  setTapStartTime(undefined);
                   setPendingSlot({ startTime, endTime, date: selectedDate });
                 }}
-                onCancel={() => setShowManualAdd(false)}
+                onCancel={() => {
+                  setShowManualAdd(false);
+                  setTapStartTime(undefined);
+                }}
               />
             )}
           </>
@@ -644,15 +659,26 @@ export default function AdminPage() {
 // =========================================================
 function ManualSlotPickerModal({
   date,
+  initialStartTime,
   onConfirm,
   onCancel,
 }: {
   date: Date;
+  initialStartTime?: string;
   onConfirm: (startTime: string, endTime: string) => void;
   onCancel: () => void;
 }) {
-  const [startTime, setStartTime] = useState("09:00");
-  const [endTime, setEndTime] = useState("10:00");
+  const initStart = initialStartTime ?? "09:00";
+  const initEnd = (() => {
+    const [h, m] = initStart.split(":").map(Number);
+    const totalMin = Math.min(h * 60 + m + 60, 24 * 60);
+    const nh = Math.floor(totalMin / 60);
+    const nm = totalMin % 60;
+    return `${String(nh).padStart(2, "0")}:${String(nm).padStart(2, "0")}`;
+  })();
+
+  const [startTime, setStartTime] = useState(initStart);
+  const [endTime, setEndTime] = useState(initEnd);
   const [error, setError] = useState<string | null>(null);
 
   const handleConfirm = () => {
@@ -882,13 +908,27 @@ function SlotCreateModal({
               定員（最大受付人数）
             </label>
             <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setCapacity((c) => Math.max(1, c - 1))}
+                className="w-11 h-11 rounded-xl bg-gray-100 hover:bg-gray-200 active:bg-gray-300 flex items-center justify-center text-gray-700 text-xl font-bold transition-colors select-none flex-shrink-0"
+              >
+                −
+              </button>
               <input
                 type="number"
                 min={1}
                 value={capacity}
                 onChange={(e) => setCapacity(Math.max(1, parseInt(e.target.value) || 1))}
-                className="w-20 px-3 py-2 rounded-lg border border-gray-200 text-sm outline-none focus:border-blue-500 bg-white text-center"
+                className="w-16 px-2 py-2 rounded-lg border border-gray-200 text-base outline-none focus:border-blue-500 bg-white text-center font-semibold"
               />
+              <button
+                type="button"
+                onClick={() => setCapacity((c) => c + 1)}
+                className="w-11 h-11 rounded-xl bg-gray-100 hover:bg-gray-200 active:bg-gray-300 flex items-center justify-center text-gray-700 text-xl font-bold transition-colors select-none flex-shrink-0"
+              >
+                ＋
+              </button>
               <span className="text-sm text-gray-500">人</span>
             </div>
           </div>
@@ -1117,13 +1157,27 @@ function SlotEditModal({
               定員（最大受付人数）
             </label>
             <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setCapacity((c) => Math.max(1, c - 1))}
+                className="w-11 h-11 rounded-xl bg-gray-100 hover:bg-gray-200 active:bg-gray-300 flex items-center justify-center text-gray-700 text-xl font-bold transition-colors select-none flex-shrink-0"
+              >
+                −
+              </button>
               <input
                 type="number"
                 min={1}
                 value={capacity}
                 onChange={(e) => setCapacity(Math.max(1, parseInt(e.target.value) || 1))}
-                className="w-20 px-3 py-2 rounded-lg border border-gray-200 text-sm outline-none focus:border-blue-500 bg-white text-center"
+                className="w-16 px-2 py-2 rounded-lg border border-gray-200 text-base outline-none focus:border-blue-500 bg-white text-center font-semibold"
               />
+              <button
+                type="button"
+                onClick={() => setCapacity((c) => c + 1)}
+                className="w-11 h-11 rounded-xl bg-gray-100 hover:bg-gray-200 active:bg-gray-300 flex items-center justify-center text-gray-700 text-xl font-bold transition-colors select-none flex-shrink-0"
+              >
+                ＋
+              </button>
               <span className="text-sm text-gray-500">人</span>
             </div>
           </div>
@@ -1513,6 +1567,7 @@ function TimeGrid({
   selectedStaffId,
   onCreate,
   onSelect,
+  onTap,
 }: {
   slots: TimeSlot[];
   categoryMap: Map<string, Category>;
@@ -1521,12 +1576,18 @@ function TimeGrid({
   selectedStaffId: string | null;
   onCreate: (startTime: string, endTime: string) => Promise<void>;
   onSelect: (slot: TimeSlot) => void;
+  onTap?: (startTime: string) => void;
 }) {
   const gridRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [dragStartMin, setDragStartMin] = useState<number | null>(null);
   const [dragEndMin, setDragEndMin] = useState<number | null>(null);
   const dragEndRef = useRef<number | null>(null);
+
+  // タッチ操作でのタップ検出用
+  const touchStartYRef = useRef<number | null>(null);
+  const touchStartTimeRef = useRef<number | null>(null);
+  const touchStartMinRef = useRef<number | null>(null);
 
   const slotLayout = useMemo(() => computeSlotLayout(slots), [slots]);
 
@@ -1550,6 +1611,38 @@ function TimeGrid({
 
   const handleSlotClick = (slot: TimeSlot) => {
     onSelect(slot);
+  };
+
+  const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (!gridRef.current) return;
+    const rect = gridRef.current.getBoundingClientRect();
+    const touch = e.touches[0];
+    const y = touch.clientY - rect.top;
+    touchStartYRef.current = touch.clientY;
+    touchStartTimeRef.current = Date.now();
+    touchStartMinRef.current = yToAbsMinutes(y);
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (
+      touchStartYRef.current === null ||
+      touchStartTimeRef.current === null ||
+      touchStartMinRef.current === null
+    ) return;
+    const touch = e.changedTouches[0];
+    const dy = Math.abs(touch.clientY - touchStartYRef.current);
+    const dt = Date.now() - touchStartTimeRef.current;
+    // スクロールではなくタップと判定: 15px以内の移動 かつ 400ms以内
+    if (dy < 15 && dt < 400) {
+      const tappedMin = touchStartMinRef.current;
+      const h = Math.floor(tappedMin / 60);
+      const m = tappedMin % 60;
+      const timeStr = `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+      onTap?.(timeStr);
+    }
+    touchStartYRef.current = null;
+    touchStartTimeRef.current = null;
+    touchStartMinRef.current = null;
   };
 
   useEffect(() => {
@@ -1620,6 +1713,8 @@ function TimeGrid({
           className="flex-1 relative border-l border-gray-200 cursor-crosshair"
           style={{ height: TOTAL_HEIGHT }}
           onMouseDown={handleGridMouseDown}
+          onTouchStart={handleTouchStart}
+          onTouchEnd={handleTouchEnd}
         >
           {hours.map((h) => (
             <div
@@ -1675,6 +1770,7 @@ function TimeGrid({
               <button
                 key={slot.id}
                 onMouseDown={(e) => e.stopPropagation()}
+                onTouchStart={(e) => e.stopPropagation()}
                 onClick={() => handleSlotClick(slot)}
                 className="absolute rounded text-white shadow-sm hover:opacity-80 active:opacity-60 transition-opacity text-left overflow-hidden"
                 style={{
