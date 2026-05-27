@@ -2005,7 +2005,7 @@ function BookingsView({
             {(["month", "week", "day", "list"] as const).map((m) => (
               <button
                 key={m}
-                onClick={() => setMode(m)}
+                onClick={() => { setMode(m); setSelectedSlotKey(null); setSelectedReservation(null); }}
                 className={cn(
                   "px-3 py-1.5 rounded-lg text-sm font-medium transition-colors",
                   mode === m ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-800"
